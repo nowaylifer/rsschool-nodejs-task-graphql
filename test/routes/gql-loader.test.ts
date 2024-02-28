@@ -58,6 +58,8 @@ await test('gql-loader', async (t) => {
       body: { operationHistory: afterHistory },
     } = await getPrismaStats(app);
 
+    debugger;
+
     t.ok(!errors);
     t.ok(afterHistory.length - beforeHistory.length <= 6);
 

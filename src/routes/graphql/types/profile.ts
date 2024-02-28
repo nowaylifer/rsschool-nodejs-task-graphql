@@ -22,13 +22,12 @@ export const ProfileType = new GraphQLObjectType<Profile, ResolveContext>({
     yearOfBirth: { type: new GraphQLNonNull(GraphQLInt) },
     memberType: {
       type: new GraphQLNonNull(MemberType),
-      resolve: (profile, _args, { prisma }) =>
-        prisma.memberType.findUnique({ where: { id: profile.memberTypeId } }),
+      resolve: (profile, _args, { memberTypeLoader }) =>
+        memberTypeLoader.load(profile.memberTypeId),
     },
     user: {
       type: new GraphQLNonNull(UserType),
-      resolve: (profile, _args, { prisma }) =>
-        prisma.user.findUnique({ where: { id: profile.userId } }),
+      resolve: (profile, _args, { userLoader }) => userLoader.load(profile.userId),
     },
   }),
 });

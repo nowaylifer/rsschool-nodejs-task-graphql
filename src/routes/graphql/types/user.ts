@@ -22,41 +22,22 @@ export const UserType = new GraphQLObjectType<User, ResolveContext>({
     balance: { type: new GraphQLNonNull(GraphQLFloat) },
     posts: {
       type: new GraphQLNonNull(new GraphQLList(new GraphQLNonNull(PostType))),
-      resolve: (user, _args, { prisma }) => {
-        return prisma.post.findMany({ where: { authorId: user.id } });
-      },
+      resolve: (user, _args, { postsByUserLoader }) => postsByUserLoader.load(user.id),
     },
     profile: {
       type: ProfileType,
-      resolve: (user, _args, { prisma }) => {
-        return prisma.profile.findUnique({ where: { userId: user.id } });
-      },
+      resolve: (user, _args, { profileByUserLoader }) =>
+        profileByUserLoader.load(user.id),
     },
     subscribedToUser: {
       type: new GraphQLNonNull(new GraphQLList(new GraphQLNonNull(UserType))),
-      resolve: (user, _args, { prisma }) =>
-        prisma.user.findMany({
-          where: {
-            userSubscribedTo: {
-              some: {
-                authorId: user.id,
-              },
-            },
-          },
-        }),
+      resolve: (user, _args, { subscribedToUserLoader }) =>
+        subscribedToUserLoader.load(user.id),
     },
     userSubscribedTo: {
       type: new GraphQLNonNull(new GraphQLList(new GraphQLNonNull(UserType))),
-      resolve: (user, _args, { prisma }) =>
-        prisma.user.findMany({
-          where: {
-            subscribedToUser: {
-              some: {
-                subscriberId: user.id,
-              },
-            },
-          },
-        }),
+      resolve: (user, _args, { userSubscribedToLoader }) =>
+        userSubscribedToLoader.load(user.id),
     },
   }),
 });

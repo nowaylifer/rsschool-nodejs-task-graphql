@@ -66,7 +66,7 @@ await test('gql-queries', async (t) => {
     const { body: profile1 } = await createProfile(app, user1.id, MemberTypeId.BASIC);
 
     const {
-      body: { data, errors },
+      body: { data },
     } = await gqlQuery(app, {
       query: `query ($userId: UUID!, $profileId: UUID!, $memberTypeId: MemberTypeId!, $postId: UUID!) {
         memberType(id: $memberTypeId) {
