@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { GraphQLObjectType } from 'graphql';
 import { ResolveContext } from '../context.js';
 import { getMemberTypeQuery, getMemberTypesQuery } from './member-type.js';

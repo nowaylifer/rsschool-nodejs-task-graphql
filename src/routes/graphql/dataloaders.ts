@@ -2,32 +2,6 @@ import { MemberType, PrismaClient, User } from '@prisma/client';
 import DataLoader from 'dataloader';
 import { groupBy, keyBy } from './utils.js';
 
-type UserWithSubs = User & { subscribedToUser: { subscriber: User }[] };
-type UserWithAuthors = User & { userSubscribedTo: { author: User }[] };
-
-const hydrateSubscribedToUser = (
-  usersWithSubs: UserWithSubs[],
-  userIds: ReadonlyArray<User['id']>,
-) => {
-  const subsMap = groupBy(usersWithSubs, (record) => record.id);
-
-  return userIds.map(
-    (id) =>
-      subsMap[id]?.flatMap((r) => r.subscribedToUser.map((v) => v.subscriber)) ?? [],
-  );
-};
-
-const hydrateUserSubscribedTo = (
-  usersWithAuthors: UserWithAuthors[],
-  userIds: ReadonlyArray<User['id']>,
-) => {
-  const authorsMap = groupBy(usersWithAuthors, (record) => record.id);
-
-  return userIds.map(
-    (id) => authorsMap[id]?.flatMap((r) => r.userSubscribedTo.map((v) => v.author)) ?? [],
-  );
-};
-
 export const createDataLoaders = (prisma: PrismaClient) => ({
   postsByUserLoader: new DataLoader(async (userIds: ReadonlyArray<User['id']>) => {
     const posts = await prisma.post.findMany({
@@ -66,7 +40,13 @@ export const createDataLoaders = (prisma: PrismaClient) => ({
       where: { id: { in: [...userIds] } },
       include: { subscribedToUser: { select: { subscriber: true } } },
     });
-    return hydrateSubscribedToUser(usersWithSubs, userIds);
+
+    const subsMap = groupBy(usersWithSubs, (record) => record.id);
+
+    return userIds.map(
+      (id) =>
+        subsMap[id]?.flatMap((r) => r.subscribedToUser.map((v) => v.subscriber)) ?? [],
+    );
   }),
 
   userSubscribedToLoader: new DataLoader(async (userIds: ReadonlyArray<User['id']>) => {
@@ -74,6 +54,12 @@ export const createDataLoaders = (prisma: PrismaClient) => ({
       where: { id: { in: [...userIds] } },
       include: { userSubscribedTo: { select: { author: true } } },
     });
-    return hydrateUserSubscribedTo(usersWithAuthors, userIds);
+
+    const authorsMap = groupBy(usersWithAuthors, (record) => record.id);
+
+    return userIds.map(
+      (id) =>
+        authorsMap[id]?.flatMap((r) => r.userSubscribedTo.map((v) => v.author)) ?? [],
+    );
   }),
 });

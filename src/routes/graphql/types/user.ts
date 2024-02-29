@@ -8,8 +8,11 @@ import {
   GraphQLNonNull,
   GraphQLObjectType,
   GraphQLString,
+  GraphQLType,
 } from 'graphql';
+import { ResolveTree, parseResolveInfo, simplify } from 'graphql-parse-resolve-info';
 import { ResolveContext } from '../context.js';
+import { keyBy } from '../utils.js';
 import { PostType } from './post.js';
 import { ProfileType } from './profile.js';
 import { UUIDType } from './uuid.js';
@@ -50,7 +53,49 @@ export const getUserQuery: GraphQLFieldConfig<null, ResolveContext, Pick<User, '
 
 export const getUsersQuery: GraphQLFieldConfig<null, ResolveContext> = {
   type: new GraphQLNonNull(new GraphQLList(new GraphQLNonNull(UserType))),
-  resolve: (_source, _args, { prisma }) => prisma.user.findMany(),
+  resolve: async (
+    _source,
+    _args,
+    { prisma, subscribedToUserLoader, userSubscribedToLoader },
+    info,
+  ) => {
+    const { fields } = simplify(
+      parseResolveInfo(info) as ResolveTree,
+      UserType as GraphQLType,
+    );
+
+    const withSubs = 'subscribedToUser' in fields;
+    const withAuthors = 'userSubscribedTo' in fields;
+
+    const users = await prisma.user.findMany({
+      include: {
+        subscribedToUser: withSubs,
+        userSubscribedTo: withAuthors,
+      },
+    });
+
+    if (withSubs || withAuthors) {
+      const usersMap = keyBy(users, (user) => user.id);
+
+      users.forEach((user) => {
+        if (withSubs) {
+          subscribedToUserLoader.prime(
+            user.id,
+            user.subscribedToUser.map((r) => usersMap[r.subscriberId]),
+          );
+        }
+
+        if (withAuthors) {
+          userSubscribedToLoader.prime(
+            user.id,
+            user.userSubscribedTo.map((r) => usersMap[r.authorId]),
+          );
+        }
+      });
+    }
+
+    return users;
+  },
 };
 
 export const CreateUserInputType = new GraphQLInputObjectType({
